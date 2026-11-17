@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: asesor-pedagogico-inteligente
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: AI_PROVIDER
+        value: gemini
+      - key: SANDBOX_MODE
+        value: static_only
+      - key: PUBLIC_DEMO_MODE
+        value: "true"

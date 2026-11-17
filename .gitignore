@@ -1,0 +1,34 @@
+# Seguridad y privacidad académica (AGENTS.md §8)
+source-material/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Entornos y dependencias Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+
+# Node / Frontend
+node_modules/
+dist/
+build/
+.vite/
+*.tsbuildinfo
+
+# Bases de datos locales y archivos subidos
+*.db
+*.sqlite
+*.sqlite3
+backend/storage/uploads/
+
+# Logs y temporales
+*.log
+.DS_Store
+Thumbs.db
