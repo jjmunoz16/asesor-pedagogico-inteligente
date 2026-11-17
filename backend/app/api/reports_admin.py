@@ -65,15 +65,15 @@ def public_overview():
         "team": [
             {
                 "name": "Juan José Muñoz Naranjo",
-                "role": "Arquitectura, Backend, Harness IA y Verificación",
+                "role": "Arquitectura de Software, Desarrollo Full-Stack, Integración de IA, Verificación y Despliegue",
                 "initials": "JM",
-                "photo_url": None,
+                "photo_url": "/team/juan_jose.jpg",
             },
             {
                 "name": "Christopher Villa Noreña",
-                "role": "Frontend React, Experiencia de Usuario y Mapa Mental Interactivo",
+                "role": "Arquitectura de Software, Desarrollo Full-Stack, Integración de IA, Verificación y Despliegue",
                 "initials": "CV",
-                "photo_url": None,
+                "photo_url": "/team/christopher.jpg",
             },
         ],
     }

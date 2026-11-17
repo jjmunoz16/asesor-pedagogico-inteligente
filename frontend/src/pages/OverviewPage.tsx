@@ -158,15 +158,15 @@ export function OverviewPage() {
             data?.team || [
               {
                 name: 'Juan José Muñoz Naranjo',
-                role: 'Arquitectura, Backend, Harness IA y Verificación',
+                role: 'Arquitectura de Software, Desarrollo Full-Stack, Integración de IA, Verificación y Despliegue',
                 initials: 'JM',
-                photo_url: null,
+                photo_url: '/team/juan_jose.jpg',
               },
               {
                 name: 'Christopher Villa Noreña',
-                role: 'Frontend React, Experiencia de Usuario y Mapa Mental Interactivo',
+                role: 'Arquitectura de Software, Desarrollo Full-Stack, Integración de IA, Verificación y Despliegue',
                 initials: 'CV',
-                photo_url: null,
+                photo_url: '/team/christopher.jpg',
               },
             ]
           ).map((member) => (
@@ -178,7 +178,7 @@ export function OverviewPage() {
                 <img
                   src={member.photo_url}
                   alt={member.name}
-                  className="h-16 w-16 rounded-full object-cover ring-2 ring-indigo-100"
+                  className="h-20 w-20 shrink-0 rounded-2xl object-cover object-top ring-2 ring-indigo-200 shadow-sm"
                 />
               ) : (
                 <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 text-lg font-bold text-white shadow-sm">

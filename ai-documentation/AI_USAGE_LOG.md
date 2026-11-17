@@ -162,3 +162,19 @@ Cada entrada debe incluir:
 - **Entregables / Resultados producidos:**
   - `render.yaml` (Blueprint Todo-en-Uno para Render Free Tier).
   - Actualización de `docs/decisiones-tecnicas/ADR_STACK_GRATUITO.md` (`ADR-006`) y `docs/DESPLIEGUE_Y_OPERACION.md`.
+
+### [AI-LOG-012] 2026-11-16 — Fase 9: Publicación en GitHub Privado, Neon PostgreSQL y Render
+- **Fase:** Fase 9 — Despliegue y documentación final.
+- **Agente / Herramienta:** Agente de Despliegue en Antigravity IDE (modelo: Gemini 4 Hydrogen High).
+- **Acciones ejecutadas:**
+  - Instalación de MinGit 2.56.1 y GitHub CLI 2.104.0; creación y push del repositorio privado `jjmunoz16/asesor-pedagogico-inteligente` (rama `main`, excluyendo `source-material/`, `.env`, `.venv/`, `node_modules/` y `*.db`).
+  - Sincronización directa hacia Neon PostgreSQL mediante `backend/sync_to_remote_db.py` (6 entregas reales, rúbricas, 6 evaluaciones base y mapa mental de 33 nodos).
+  - Despliegue confirmado por el usuario en Render (Web Service Free Tier con `Dockerfile` Todo-en-Uno).
+- **Estado:** Plataforma desplegada en línea y lista para socialización.
+
+### [AI-LOG-013] 2026-11-16 — Fotografías Reales y Roles Equilibrados del Equipo
+- **Fase:** Ajustes finales de presentación (Funcionalidad Obligatoria #7).
+- **Agente / Herramienta:** Agentes Frontend, Backend y Despliegue en Antigravity IDE (modelo: Gemini 4 Hydrogen High).
+- **Cambios aplicados:**
+  - Incorporadas fotografías reales en `frontend/public/team/christopher.jpg` y `frontend/public/team/juan_jose.jpg`.
+  - Actualizado `backend/app/api/reports_admin.py` y `frontend/src/pages/OverviewPage.tsx` con roles equivalentes de arquitectura, desarrollo full-stack, integración de IA, verificación y despliegue para **Juan José Muñoz Naranjo** y **Christopher Villa Noreña**.
