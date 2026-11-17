@@ -178,3 +178,14 @@ Cada entrada debe incluir:
 - **Cambios aplicados:**
   - Incorporadas fotografías reales en `frontend/public/team/christopher.jpg` y `frontend/public/team/juan_jose.jpg`.
   - Actualizado `backend/app/api/reports_admin.py` y `frontend/src/pages/OverviewPage.tsx` con roles equivalentes de arquitectura, desarrollo full-stack, integración de IA, verificación y despliegue para **Juan José Muñoz Naranjo** y **Christopher Villa Noreña**.
+
+
+### [AI-LOG-014] 2026-11-17 — Publicación de Repositorio, Auditoría Final y Sincronización Documental/UI
+- **Fase:** Cierre de Fase 9 — Auditoría de conformidad previa a socialización.
+- **Agente / Herramienta:** Agente Auditor / Coordinador en Antigravity IDE (modelo: Claude / Gemini en Antigravity).
+- **Acciones ejecutadas:**
+  - Cambio de visibilidad del repositorio `jjmunoz16/asesor-pedagogico-inteligente` a **PUBLIC** para acceso de EvaluaIA y revisión docente, verificando la exclusión total de `source-material/`, `.env` y `.db`.
+  - Auditoría exhaustiva contra las 7 Funcionalidades Obligatorias y 6 Condiciones de Ingeniería del documento oficial del profesor.
+  - Actualización de `README.md`, `docs/PLAN_DE_TRABAJO.md`, `docs/DECISIONES_PENDIENTES.md` y `docs/DESPLIEGUE_Y_OPERACION.md` al estado real de implementación y despliegue.
+  - Mejoras de claridad en la aplicación: enlace al repositorio público en `backend/app/api/reports_admin.py` y `OverviewPage.tsx`, y nota explicativa sobre proveedores nube/locales/determinista en `AdminModelsPage.tsx`.
+- **Verificación ejecutada:** `pytest tests -v` (`10/10` aprobadas) y `npm run build` (`tsc -b && vite build`, código 0).

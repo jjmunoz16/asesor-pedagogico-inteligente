@@ -35,7 +35,7 @@ Desde la raíz del proyecto:
 
 Arquitectura Todo-en-Uno (1 sola URL pública HTTPS):
 1. **Neon** (`neon.tech`) → Base de datos PostgreSQL gratuita (1 GB).
-2. **GitHub** (`github.com`) → Repositorio **privado** (sin `source-material/` ni `.env`).
+2. **GitHub** (`github.com`) → Repositorio público para evaluación (`jjmunoz16/asesor-pedagogico-inteligente`), excluyendo estrictamente `source-material/`, `.env` y bases `.db` vía `.gitignore`.
 3. **Render** (`render.com`) → Web Service gratuito con nuestro `Dockerfile` Todo-en-Uno (sirve React + FastAPI juntos).
 
 ---
@@ -52,9 +52,9 @@ $env:DATABASE_URL="PEGA_AQUI_TU_CADENA_DE_NEON"
 
 ---
 
-### Paso 2: Subir el código a un Repositorio Privado en GitHub
-1. Crea un repositorio **Private** en **https://github.com/new** (ej. `asesor-pedagogico-inteligente`).
-2. Sube el proyecto verificando que `.gitignore` excluya `source-material/`, `.env`, `.venv/`, `node_modules/` y `*.db`.
+### Paso 2: Subir el código a GitHub
+1. Crea un repositorio en **https://github.com/new** (`asesor-pedagogico-inteligente`, público para evaluación docente o privado según necesidad).
+2. Sube el proyecto verificando que `.gitignore` excluya estrictamente `source-material/`, `.env`, `.venv/`, `node_modules/` y `*.db`.
 
 ---
 

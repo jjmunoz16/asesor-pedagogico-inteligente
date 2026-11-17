@@ -1,7 +1,8 @@
 # Plan de Trabajo — Asesor Pedagógico Inteligente
 
 **Proyecto:** Plataforma web *Asesor Pedagógico Inteligente* (Profundización I – Inteligencia Artificial, Universidad de Manizales).  
-**Enfoque:** Desarrollo por fases con compuertas de validación humana, alineado con `AGENTS.md`, `README.md` y el documento oficial del profesor.
+**Enfoque:** Desarrollo por fases con compuertas de validación humana, alineado con `AGENTS.md`, `README.md` y el documento oficial del profesor.  
+**Estado actual (2026-11-17):** **Fases 1 a 9 completadas** — Aplicación implementada, verificada (`10/10` pytest, build Vite/TS limpio) y desplegada en Render + Neon PostgreSQL.
 
 ---
 
@@ -28,7 +29,7 @@ Fase 5 (UX/UI) ◄── Fase 4 (Arquitectura y Datos) ◄───────�
 
 ## Detalle por Fase
 
-### Fase 1: Preparación del entorno y organización documental (ACTUAL)
+### Fase 1: Preparación del entorno y organización documental (COMPLETADA)
 - **Objetivo:** Reconocer el workspace, verificar capacidades del IDE, documentar inconsistencias, definir estrategia de agentes y preparar artefactos de control.
 - **Dependencias:** Ninguna.
 - **Entregables:**

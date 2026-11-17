@@ -47,6 +47,7 @@ def public_overview():
         "project_title": "Asesor Pedagógico Inteligente",
         "course": "Profundización I – Inteligencia Artificial",
         "university": "Universidad de Manizales — Facultad de Ciencias e Ingeniería",
+        "repository_url": "https://github.com/jjmunoz16/asesor-pedagogico-inteligente",
         "abstract": (
             "Plataforma web inteligente diseñada para analizar evidencias académicas reales de las "
             "Cohortes 1 y 2 (seis actividades prácticas), evaluar el cumplimiento de objetivos bajo "
@@ -57,10 +58,11 @@ def public_overview():
         ),
         "technologies": [
             "Python 3.12 + FastAPI + Pydantic v2",
-            "React + TypeScript + Vite + Tailwind CSS + @xyflow/react",
-            "SQLModel + SQLite / PostgreSQL (Neon Free Tier)",
-            "Model Router intercambiable (Gemini Free Tier, Groq Free Tier, Ollama/LM Studio, Auditor Determinista)",
-            "Sandbox de verificación AST y ejecución aislada sin red",
+            "React 19 + TypeScript + Vite + Tailwind CSS + @xyflow/react",
+            "SQLModel + SQLite (local) / PostgreSQL (Neon Free Tier)",
+            "Model Router intercambiable (Gemini Free Tier, Groq Free Tier, Ollama/LM Studio locales, Auditor Determinista)",
+            "Sandbox de verificación AST / subproceso aislado sin red",
+            "Despliegue Docker Todo-en-Uno en Render Free Tier + 10/10 pruebas pytest",
         ],
         "team": [
             {

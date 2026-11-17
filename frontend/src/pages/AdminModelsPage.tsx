@@ -63,6 +63,13 @@ export function AdminModelsPage() {
         </p>
       </div>
 
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs sm:text-sm text-slate-700">
+        <strong>¿Cómo funcionan estos proveedores?</strong>{' '}
+        <strong>Gemini</strong> y <strong>Groq</strong> consumen APIs gratuitas en la nube cuando hay clave configurada;{' '}
+        <strong>Ollama</strong> y <strong>LM Studio</strong> son conectores para ejecución local privada (<code>localhost</code>, no embebidos en el contenedor de Render); y{' '}
+        <strong>Auditor Determinista (Offline)</strong> funciona siempre sin red ni API keys. En todos los casos, la nota <code>0,0–5,0</code> la calcula el backend.
+      </div>
+
       {msg && (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           {msg}

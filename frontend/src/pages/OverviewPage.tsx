@@ -17,6 +17,7 @@ interface OverviewData {
   project_title: string;
   course: string;
   university: string;
+  repository_url?: string;
   abstract: string;
   technologies: string[];
   team: Array<{ name: string; role: string; initials: string; photo_url: string | null }>;
@@ -64,6 +65,14 @@ export function OverviewPage() {
             >
               <Network className="h-4 w-4" /> Mapa Mental Interactivo
             </Link>
+            <a
+              href={data?.repository_url || 'https://github.com/jjmunoz16/asesor-pedagogico-inteligente'}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+            >
+              <FolderGit2 className="h-4 w-4" /> Código en GitHub
+            </a>
           </div>
         </div>
 
