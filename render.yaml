@@ -17,4 +17,4 @@ services:
       - key: SANDBOX_MODE
         value: static_only
       - key: PUBLIC_DEMO_MODE
-        value: "true"
+        value: "false"

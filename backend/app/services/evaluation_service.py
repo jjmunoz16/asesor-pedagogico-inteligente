@@ -10,6 +10,7 @@ from sqlmodel import Session, select
 from app.ai.base import EvaluationContext
 from app.ai.router import ModelRouter
 from app.core.config import get_settings
+from app.core.security import assert_submission_access
 from app.db.models import (
     Activity,
     AuditLog,
@@ -28,6 +29,7 @@ from app.db.models import (
     User,
 )
 from app.schemas.evaluation import AIEvaluationPayload, TeacherReviewRequest
+from app.services.extractor_service import detect_prompt_injection_signals
 from app.services.rubric_service import get_active_rubric_bundle
 from app.services.sandbox_service import run_sandbox_checks
 from app.services.scoring_service import calculate_weighted_score
@@ -95,6 +97,7 @@ async def run_submission_evaluation(
     submission = session.exec(select(Submission).where(Submission.id == submission_id)).first()
     if not submission:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Entrega no encontrada.")
+    assert_submission_access(submission, actor_user)
 
     activity = session.exec(select(Activity).where(Activity.id == submission.activity_id)).first()
     cohort = session.exec(select(Cohort).where(Cohort.id == activity.cohort_id)).first()
@@ -122,6 +125,10 @@ async def run_submission_evaluation(
         mode=settings.sandbox_mode,
         timeout_seconds=settings.sandbox_timeout_seconds,
     )
+    for ev in evidences:
+        inj_hits = detect_prompt_injection_signals(ev.extracted_text_summary)
+        for hit in inj_hits:
+            sandbox_dict["static_findings"].append(f"[{ev.filename}] Seguridad IA: {hit}")
     code_check = CodeCheckResult(
         submission_id=submission.id,
         sandbox_mode=sandbox_dict["sandbox_mode"],

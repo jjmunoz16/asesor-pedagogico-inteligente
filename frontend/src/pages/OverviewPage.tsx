@@ -7,11 +7,14 @@ import {
   FileCheck2,
   FolderGit2,
   LineChart,
+  Lock,
   LockOpen,
+  LogIn,
   Network,
   ShieldCheck,
 } from 'lucide-react';
 import { apiRequest } from '../api/client';
+import { useAuth } from '../auth/AuthContext';
 
 interface OverviewData {
   project_title: string;
@@ -24,6 +27,7 @@ interface OverviewData {
 }
 
 export function OverviewPage() {
+  const { user, isOpenDemo } = useAuth();
   const [data, setData] = useState<OverviewData | null>(null);
 
   useEffect(() => {
@@ -46,25 +50,37 @@ export function OverviewPage() {
           </p>
 
           <div className="mt-7 flex flex-wrap gap-3">
-            <Link
-              to="/portafolio"
-              className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-indigo-900 shadow-sm transition hover:bg-indigo-50"
-            >
-              <FolderGit2 className="h-4 w-4" /> Explorar Portafolio
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              to="/informe-integral"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
-            >
-              <LineChart className="h-4 w-4" /> Informe Integral
-            </Link>
-            <Link
-              to="/mapa-mental"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
-            >
-              <Network className="h-4 w-4" /> Mapa Mental Interactivo
-            </Link>
+            {user || isOpenDemo ? (
+              <>
+                <Link
+                  to="/portafolio"
+                  className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-indigo-900 shadow-sm transition hover:bg-indigo-50"
+                >
+                  <FolderGit2 className="h-4 w-4" /> Explorar Portafolio
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  to="/informe-integral"
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                >
+                  <LineChart className="h-4 w-4" /> Informe Integral
+                </Link>
+                <Link
+                  to="/mapa-mental"
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                >
+                  <Network className="h-4 w-4" /> Mapa Mental Interactivo
+                </Link>
+              </>
+            ) : (
+              <Link
+                to="/login"
+                className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-indigo-900 shadow-sm transition hover:bg-indigo-50"
+              >
+                <LogIn className="h-4 w-4" /> Iniciar sesión para acceder
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            )}
             <a
               href={data?.repository_url || 'https://github.com/jjmunoz16/asesor-pedagogico-inteligente'}
               target="_blank"
@@ -94,15 +110,21 @@ export function OverviewPage() {
         </div>
       </section>
 
-      <div className="flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50/80 px-5 py-4 text-xs sm:text-sm text-sky-950">
-        <LockOpen className="mt-0.5 h-5 w-5 shrink-0 text-sky-600" />
-        <div>
-          <strong>Acceso directo habilitado para revisión docente:</strong> todas las secciones están
-          abiertas sin pantalla de login para facilitar la exploración inmediata. El módulo de
-          autenticación <strong>JWT + control por roles (RBAC)</strong> ya está implementado y
-          probado; puede activarse en cualquier momento con <code>PUBLIC_DEMO_MODE=false</code>.
+      {isOpenDemo ? (
+        <div className="flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50/80 px-5 py-4 text-xs sm:text-sm text-sky-950">
+          <LockOpen className="mt-0.5 h-5 w-5 shrink-0 text-sky-600" />
+          <div>
+            <strong>Modo demo abierto activo:</strong> exploración directa habilitada. Para exigir autenticación estricta configure <code>PUBLIC_DEMO_MODE=false</code>.
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-5 py-4 text-xs sm:text-sm text-emerald-950">
+          <Lock className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
+          <div>
+            <strong>Seguridad estricta activa (JWT + RBAC):</strong> todas las rutas académicas, carga de archivos, rúbricas, evaluaciones e informes exigen inicio de sesión válido, control de roles y aislamiento de entregas privadas.
+          </div>
+        </div>
+      )}
 
       <section className="grid gap-5 md:grid-cols-3">
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs transition hover:shadow-md">

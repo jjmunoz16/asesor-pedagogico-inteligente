@@ -189,3 +189,12 @@ Cada entrada debe incluir:
   - Actualización de `README.md`, `docs/PLAN_DE_TRABAJO.md`, `docs/DECISIONES_PENDIENTES.md` y `docs/DESPLIEGUE_Y_OPERACION.md` al estado real de implementación y despliegue.
   - Mejoras de claridad en la aplicación: enlace al repositorio público en `backend/app/api/reports_admin.py` y `OverviewPage.tsx`, y nota explicativa sobre proveedores nube/locales/determinista en `AdminModelsPage.tsx`.
 - **Verificación ejecutada:** `pytest tests -v` (`10/10` aprobadas) y `npm run build` (`tsc -b && vite build`, código 0).
+
+### [AI-LOG-015] 2026-11-17 — Endurecimiento de Seguridad Integral, Login Obligatorio y Descarga Real PDF/MD
+- **Fase:** Post-socialización — Hardening para auditoría de seguridad, calidad de software y uso responsable de IA.
+- **Agente / Herramienta:** Agentes Seguridad, Backend, Frontend y QA en Antigravity IDE.
+- **Mejoras implementadas:**
+  - **Login y Control de Acceso:** activado `PUBLIC_DEMO_MODE=false` por defecto y en `render.yaml`; eliminadas contraseñas fijas y secreto JWT predecible del código fuente; agregado botón/apartado de inicio de sesión (`/login`), cambio de contraseña (`/auth/change-password`), lista negra de tokens JWT revocados (`RevokedToken` + `/auth/logout`) y endpoints administrativos de usuarios (`/auth/users`).
+  - **Protección Anti-Ataques:** `SlidingWindowRateLimiter` contra fuerza bruta (`login`, `register`, cargas y evaluaciones IA); validación de complejidad de contraseñas; cabeceras HTTP de seguridad (`CSP`, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `HSTS`); control BOLA/IDOR por entrega privada; saneamiento estricto de archivos, carga por streaming, lista blanca de extensiones, validación HTTPS `github.com` contra SSRF, protección anti-Zip-Bomb / path-traversal en `.zip` y defensa anti-prompt-injection (`<untrusted_student_evidence>` + detector de patrones).
+  - **Descargas y Cumplimiento V3:** generador puro en Python de PDF 1.4 multipágina (`pdf_service.py`) para descarga directa de Informes Individuales y del Informe Integral (`.pdf`, `.md`, `.json`) y modal `+ Nueva Actividad` para docentes en `PortfolioPage.tsx`.
+- **Verificación ejecutada:** `npm run build` (`tsc -b && vite build` exitoso) y `pytest tests -v` (`11/11` pruebas aprobadas incluyendo pruebas de seguridad).

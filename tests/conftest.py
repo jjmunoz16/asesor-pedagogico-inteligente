@@ -1,5 +1,7 @@
 """Configuración compartida de pytest para pruebas aisladas con BD SQLite temporal."""
 
+from contextlib import asynccontextmanager
+import os
 import sys
 from pathlib import Path
 
@@ -13,7 +15,12 @@ BACKEND_DIR = Path(__file__).resolve().parents[1] / "backend"
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
+os.environ.setdefault("DEMO_STUDENT_PASSWORD", "PytestStudent2026!")
+os.environ.setdefault("DEMO_TEACHER_PASSWORD", "PytestTeacher2026!")
+os.environ.setdefault("DEMO_ADMIN_PASSWORD", "PytestAdmin2026!")
+
 from app.core.config import get_settings  # noqa: E402
+from app.core.rate_limit import reset_all_rate_limiters  # noqa: E402
 from app.db.seed import run_seed  # noqa: E402
 from app.db.session import get_session  # noqa: E402
 from app.main import create_app  # noqa: E402
@@ -21,6 +28,8 @@ from app.main import create_app  # noqa: E402
 
 @pytest.fixture(name="session")
 def session_fixture():
+    reset_all_rate_limiters()
+    get_settings.cache_clear()
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -40,14 +49,10 @@ def client_fixture(session: Session):
         yield session
 
     app.dependency_overrides[get_session] = _override_session
-    # Sobrescribir lifespan en tests para no tocar la BD real de desarrollo
     app.router.lifespan_context = _noop_lifespan
     with TestClient(app) as client:
         yield client
     app.dependency_overrides.clear()
-
-
-from contextlib import asynccontextmanager  # noqa: E402
 
 
 @asynccontextmanager

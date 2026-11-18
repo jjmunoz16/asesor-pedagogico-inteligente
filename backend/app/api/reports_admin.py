@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
@@ -13,7 +13,11 @@ from app.core.security import get_current_user, require_roles
 from app.db.models import AuditLog, RuntimeAIConfig, User, UserRole
 from app.db.session import get_session
 from app.services.mindmap_service import build_mindmap_graph
-from app.services.report_service import build_integrated_learning_report
+from app.services.pdf_service import render_integrated_report_pdf
+from app.services.report_service import (
+    build_integrated_learning_report,
+    render_integrated_report_markdown,
+)
 
 
 public_router = APIRouter(tags=["public"])
@@ -87,6 +91,38 @@ def integrated_report(
     session: Annotated[Session, Depends(get_session)],
 ):
     return build_integrated_learning_report(session)
+
+
+@reports_router.get("/integrated/markdown")
+def integrated_report_markdown(
+    _: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+):
+    integrated = build_integrated_learning_report(session)
+    md = render_integrated_report_markdown(integrated)
+    return Response(
+        content=md,
+        media_type="text/markdown; charset=utf-8",
+        headers={
+            "Content-Disposition": 'attachment; filename="informe_integral_aprendizaje.md"'
+        },
+    )
+
+
+@reports_router.get("/integrated/pdf")
+def integrated_report_pdf(
+    _: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+):
+    integrated = build_integrated_learning_report(session)
+    pdf_bytes = render_integrated_report_pdf(integrated)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": 'attachment; filename="informe_integral_aprendizaje.pdf"'
+        },
+    )
 
 
 @mindmap_router.get("")

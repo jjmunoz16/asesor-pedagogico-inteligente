@@ -31,6 +31,16 @@ export function PortfolioPage() {
   const [notes, setNotes] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
 
+  const [newActOpen, setNewActOpen] = useState(false);
+  const [actCohortId, setActCohortId] = useState(1);
+  const [actSlug, setActSlug] = useState('');
+  const [actTitle, setActTitle] = useState('');
+  const [actType, setActType] = useState<'lab' | 'exam' | 'colloquium'>('lab');
+  const [actObjective, setActObjective] = useState('');
+  const [actDescription, setActDescription] = useState('');
+
+  const isPrivileged = user?.role === 'teacher' || user?.role === 'admin';
+
   async function loadActivities() {
     setLoading(true);
     try {
@@ -67,6 +77,38 @@ export function PortfolioPage() {
       setError(err instanceof Error ? err.message : 'Error ejecutando evaluación');
     } finally {
       setEvaluatingId(null);
+    }
+  }
+
+  async function handleCreateActivity(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setMessage(null);
+    try {
+      await apiRequest(
+        '/portfolio/activities',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            cohort_id: actCohortId,
+            slug: actSlug.trim().toLowerCase(),
+            title: actTitle.trim(),
+            activity_type: actType,
+            official_objective: actObjective.trim() || null,
+            description: actDescription.trim(),
+          }),
+        },
+        token,
+      );
+      setNewActOpen(false);
+      setActSlug('');
+      setActTitle('');
+      setActObjective('');
+      setActDescription('');
+      setMessage('Actividad académica registrada correctamente.');
+      await loadActivities();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error creando actividad');
     }
   }
 
@@ -122,7 +164,17 @@ export function PortfolioPage() {
           </p>
         </div>
 
-        <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-xs">
+        <div className="flex flex-wrap items-center gap-2">
+          {isPrivileged && (
+            <button
+              type="button"
+              onClick={() => setNewActOpen(true)}
+              className="rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-indigo-700"
+            >
+              + Nueva Actividad
+            </button>
+          )}
+          <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-xs">
           {[
             { id: 'ALL', label: `Todas (${activities.length})` },
             {
@@ -146,6 +198,7 @@ export function PortfolioPage() {
               {tab.label}
             </button>
           ))}
+          </div>
         </div>
       </div>
 
@@ -331,6 +384,98 @@ export function PortfolioPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {newActOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-slate-900">
+              Registrar Nueva Actividad Académica
+            </h3>
+            <form onSubmit={handleCreateActivity} className="mt-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">Cohorte</label>
+                  <select
+                    value={actCohortId}
+                    onChange={(e) => setActCohortId(Number(e.target.value))}
+                    className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                  >
+                    <option value={1}>Cohorte 1 (Primer corte)</option>
+                    <option value={2}>Cohorte 2 (Segundo corte)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">Tipo</label>
+                  <select
+                    value={actType}
+                    onChange={(e) => setActType(e.target.value as 'lab' | 'exam' | 'colloquium')}
+                    className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                  >
+                    <option value="lab">Laboratorio</option>
+                    <option value="exam">Parcial</option>
+                    <option value="colloquium">Coloquio</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700">Identificador (slug)</label>
+                <input
+                  type="text"
+                  required
+                  pattern="[a-z0-9-]+"
+                  placeholder="lab7-evaluacion"
+                  value={actSlug}
+                  onChange={(e) => setActSlug(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700">Título de la actividad</label>
+                <input
+                  type="text"
+                  required
+                  value={actTitle}
+                  onChange={(e) => setActTitle(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700">Objetivo oficial</label>
+                <textarea
+                  rows={2}
+                  value={actObjective}
+                  onChange={(e) => setActObjective(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700">Descripción</label>
+                <textarea
+                  rows={2}
+                  value={actDescription}
+                  onChange={(e) => setActDescription(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setNewActOpen(false)}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+                >
+                  Registrar actividad
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

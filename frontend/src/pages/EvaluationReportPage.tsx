@@ -8,7 +8,7 @@ import {
   ShieldCheck,
   Terminal,
 } from 'lucide-react';
-import { apiRequest } from '../api/client';
+import { apiDownloadBlob, apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import type { IndividualReport } from '../types';
 
@@ -25,16 +25,30 @@ export function EvaluationReportPage() {
       .catch((err) => setError(err instanceof Error ? err.message : 'Error cargando informe'));
   }, [token, evaluationId]);
 
+  async function downloadPdf() {
+    if (!evaluationId) return;
+    try {
+      await apiDownloadBlob(
+        `/evaluations/${evaluationId}/pdf`,
+        `informe_evaluacion_${evaluationId}.pdf`,
+        token,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error descargando PDF');
+    }
+  }
+
   async function downloadMarkdown() {
     if (!evaluationId) return;
-    const md = await apiRequest<string>(`/evaluations/${evaluationId}/markdown`, {}, token);
-    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `informe_evaluacion_${evaluationId}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      await apiDownloadBlob(
+        `/evaluations/${evaluationId}/markdown`,
+        `informe_evaluacion_${evaluationId}.md`,
+        token,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error descargando Markdown');
+    }
   }
 
   function downloadJson() {
@@ -113,10 +127,10 @@ export function EvaluationReportPage() {
 
             <div className="no-print flex flex-wrap justify-end gap-2">
               <button
-                onClick={() => window.print()}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                onClick={downloadPdf}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
               >
-                <Printer className="h-3.5 w-3.5" /> PDF
+                <Download className="h-3.5 w-3.5" /> Descargar PDF
               </button>
               <button
                 onClick={downloadMarkdown}
@@ -129,6 +143,12 @@ export function EvaluationReportPage() {
                 className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
               >
                 <Download className="h-3.5 w-3.5" /> .JSON
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                <Printer className="h-3.5 w-3.5" /> Imprimir
               </button>
               {(user?.role === 'teacher' || user?.role === 'admin') && (
                 <Link

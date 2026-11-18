@@ -6,7 +6,9 @@ import {
   Cpu,
   FolderGit2,
   GraduationCap,
+  KeyRound,
   LineChart,
+  LogIn,
   LogOut,
   Network,
   ShieldCheck,
@@ -19,12 +21,41 @@ import type { UserRole } from '../types';
 export function Layout() {
   const { user, token, isOpenDemo, demoRole, switchDemoRole, logout } = useAuth();
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'waking'>('checking');
+  const [pwModalOpen, setPwModalOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [pwMsg, setPwMsg] = useState<string | null>(null);
+  const [pwErr, setPwErr] = useState<string | null>(null);
 
   useEffect(() => {
     apiRequest<{ status: string }>('/health')
       .then(() => setApiStatus('online'))
       .catch(() => setApiStatus('waking'));
   }, []);
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setPwErr(null);
+    setPwMsg(null);
+    try {
+      await apiRequest(
+        '/auth/change-password',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            current_password: currentPassword,
+            new_password: newPassword,
+          }),
+        },
+        token,
+      );
+      setPwMsg('Contraseña actualizada correctamente.');
+      setCurrentPassword('');
+      setNewPassword('');
+    } catch (err) {
+      setPwErr(err instanceof Error ? err.message : 'Error cambiando contraseña');
+    }
+  }
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
     `group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all ${
@@ -100,20 +131,35 @@ export function Layout() {
                   <option value="admin">Administrador</option>
                 </select>
               </div>
+            ) : user ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="hidden sm:inline rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
+                  {user.full_name} ({user.role})
+                </span>
+                <button
+                  onClick={() => {
+                    setPwMsg(null);
+                    setPwErr(null);
+                    setPwModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                >
+                  <KeyRound className="h-3.5 w-3.5" /> Clave
+                </button>
+                <button
+                  onClick={() => logout()}
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                >
+                  <LogOut className="h-3.5 w-3.5" /> Salir
+                </button>
+              </div>
             ) : (
-              user && (
-                <div className="flex items-center gap-2">
-                  <span className="hidden sm:inline rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
-                    {user.full_name} ({user.role})
-                  </span>
-                  <button
-                    onClick={logout}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                  >
-                    <LogOut className="h-3.5 w-3.5" /> Salir
-                  </button>
-                </div>
-              )
+              <Link
+                to="/login"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
+              >
+                <LogIn className="h-3.5 w-3.5" /> Iniciar sesión
+              </Link>
             )}
           </div>
         </div>
@@ -145,6 +191,11 @@ export function Layout() {
                   <NavLink to="/" end className={navClass}>
                     <BookOpen className="h-4 w-4" /> Proyecto y Equipo
                   </NavLink>
+                  {!user && !isOpenDemo && (
+                    <NavLink to="/login" className={navClass}>
+                      <LogIn className="h-4 w-4" /> Iniciar Sesión
+                    </NavLink>
+                  )}
                 </div>
               </div>
 
@@ -190,9 +241,9 @@ export function Layout() {
             </nav>
 
             <div className="mt-6 rounded-xl border border-slate-800 bg-slate-800/60 p-3 text-xs text-slate-300">
-              <p className="font-semibold text-white">Portafolio Precargado</p>
+              <p className="font-semibold text-white">Seguridad Activa</p>
               <p className="mt-1 text-[11px] text-slate-400">
-                Cohorte 1: 4 actividades · Cohorte 2: 2 actividades · Cálculo determinista 0,0–5,0.
+                JWT + bcrypt + RBAC · Control BOLA/IDOR · Sandbox AST · Cálculo determinista 0,0–5,0.
               </p>
             </div>
           </div>
@@ -202,6 +253,61 @@ export function Layout() {
           <Outlet />
         </main>
       </div>
+
+      {pwModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h2 className="text-lg font-bold text-slate-900">Cambiar contraseña</h2>
+            <p className="mt-1 text-xs text-slate-500">
+              Debe tener mínimo 8 caracteres, una mayúscula, una minúscula y un número.
+            </p>
+            <form onSubmit={handleChangePassword} className="mt-4 space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700">Contraseña actual</label>
+                <input
+                  type="password"
+                  required
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700">Nueva contraseña</label>
+                <input
+                  type="password"
+                  required
+                  minLength={8}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                />
+              </div>
+              {pwErr && (
+                <div className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{pwErr}</div>
+              )}
+              {pwMsg && (
+                <div className="rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700">{pwMsg}</div>
+              )}
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setPwModalOpen(false)}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700"
+                >
+                  Cerrar
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+                >
+                  Actualizar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

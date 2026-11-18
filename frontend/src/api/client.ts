@@ -9,21 +9,34 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiRequest<T>(
-  path: string,
-  options: RequestInit = {},
+function buildAuthHeaders(
   token?: string | null,
-): Promise<T> {
-  const headers = new Headers(options.headers || {});
-  if (!(options.body instanceof FormData) && !headers.has('Content-Type')) {
+  initial?: HeadersInit,
+  isFormData = false,
+): Headers {
+  const headers = new Headers(initial || {});
+  if (!isFormData && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   } else {
-    const demoRole = sessionStorage.getItem(DEMO_ROLE_KEY) || 'teacher';
-    headers.set('X-Demo-Role', demoRole);
+    const demoRole = sessionStorage.getItem(DEMO_ROLE_KEY);
+    if (demoRole) headers.set('X-Demo-Role', demoRole);
   }
+  return headers;
+}
+
+export async function apiRequest<T>(
+  path: string,
+  options: RequestInit = {},
+  token?: string | null,
+): Promise<T> {
+  const headers = buildAuthHeaders(
+    token,
+    options.headers,
+    options.body instanceof FormData,
+  );
 
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
@@ -46,4 +59,32 @@ export async function apiRequest<T>(
     return (await response.json()) as T;
   }
   return (await response.text()) as unknown as T;
+}
+
+export async function apiDownloadBlob(
+  path: string,
+  fallbackFilename: string,
+  token?: string | null,
+): Promise<void> {
+  const headers = buildAuthHeaders(token, undefined, true);
+  const response = await fetch(`${API_BASE}${path}`, { headers });
+  if (!response.ok) {
+    let detail = `Error descargando archivo (HTTP ${response.status})`;
+    try {
+      const errBody = await response.json();
+      detail = errBody.detail || detail;
+    } catch {
+      // mantener mensaje por defecto
+    }
+    throw new ApiError(response.status, detail);
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fallbackFilename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }

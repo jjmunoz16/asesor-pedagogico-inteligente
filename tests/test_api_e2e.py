@@ -97,17 +97,30 @@ def test_full_evaluation_3d_hitl_reports_and_mindmap(client: TestClient, demo_pa
     assert approved["status"] == "approved"
     assert approved["dimension_cuantificacion"]["final_score_approved"] is not None
 
-    # Exportar Markdown
+    # Exportar Markdown y PDF real individual
     md_resp = client.get(f"/api/v1/evaluations/{eval_id}/markdown", headers=student_hdr)
     assert md_resp.status_code == 200
     assert "VERIFICACIÓN" in md_resp.text
 
-    # Informe integral
+    pdf_resp = client.get(f"/api/v1/evaluations/{eval_id}/pdf", headers=student_hdr)
+    assert pdf_resp.status_code == 200
+    assert pdf_resp.headers["content-type"].startswith("application/pdf")
+    assert pdf_resp.content.startswith(b"%PDF-1.4")
+
+    # Informe integral + exportaciones .md y .pdf reales
     int_resp = client.get("/api/v1/reports/integrated", headers=student_hdr)
     assert int_resp.status_code == 200
     assert int_resp.json()["evaluated_activities"] == 1
 
-    # Mapa mental interactivo extendido (29 nodos: núcleo, 4 macro-áreas, 8 ejes, 16 subtemas)
+    int_md = client.get("/api/v1/reports/integrated/markdown", headers=student_hdr)
+    assert int_md.status_code == 200
+    assert "Informe Integral" in int_md.text
+
+    int_pdf = client.get("/api/v1/reports/integrated/pdf", headers=student_hdr)
+    assert int_pdf.status_code == 200
+    assert int_pdf.content.startswith(b"%PDF-1.4")
+
+    # Mapa mental interactivo extendido
     mm_resp = client.get("/api/v1/mindmap", headers=student_hdr)
     assert mm_resp.status_code == 200
     mm = mm_resp.json()
@@ -115,16 +128,102 @@ def test_full_evaluation_3d_hitl_reports_and_mindmap(client: TestClient, demo_pa
     assert len(mm["edges"]) >= 30
 
 
-def test_open_demo_mode_vs_strict_auth(client: TestClient, monkeypatch):
-    # En modo demo abierto (por defecto), se puede consultar sin token
-    open_resp = client.get("/api/v1/portfolio/activities")
-    assert open_resp.status_code == 200
-    assert len(open_resp.json()) == 6
-
-    # Con PUBLIC_DEMO_MODE=false, el endpoint exige token JWT (401)
+def test_security_hardening_auth_bola_uploads_and_rate_limit(
+    client: TestClient, demo_passwords, monkeypatch
+):
     from app.core.config import get_settings
 
-    monkeypatch.setattr(get_settings(), "public_demo_mode", False)
-    strict_resp = client.get("/api/v1/portfolio/activities")
+    # 1. Por defecto PUBLIC_DEMO_MODE=False: sin token exige 401 incluso enviando X-Demo-Role
+    strict_resp = client.get(
+        "/api/v1/portfolio/activities", headers={"X-Demo-Role": "admin"}
+    )
     assert strict_resp.status_code == 401
+    assert strict_resp.headers.get("X-Content-Type-Options") == "nosniff"
+    assert strict_resp.headers.get("X-Frame-Options") == "DENY"
+    assert "default-src 'self'" in (strict_resp.headers.get("Content-Security-Policy") or "")
+
+    # 2. Registro con contraseña débil falla (422) y con contraseña fuerte crea rol STUDENT
+    weak_reg = client.post(
+        "/api/v1/auth/register",
+        json={"email": "hacker@umanizales.edu.co", "full_name": "Hacker", "password": "password"},
+    )
+    assert weak_reg.status_code == 422
+
+    reg1 = client.post(
+        "/api/v1/auth/register",
+        json={"email": "alumno1@umanizales.edu.co", "full_name": "Alumno Uno", "password": "ClaveSegura2026!"},
+    )
+    assert reg1.status_code == 201
+    assert reg1.json()["user"]["role"] == "student"
+    hdr1 = {"Authorization": f"Bearer {reg1.json()['access_token']}"}
+
+    reg2 = client.post(
+        "/api/v1/auth/register",
+        json={"email": "alumno2@umanizales.edu.co", "full_name": "Alumno Dos", "password": "ClaveSegura2026!"},
+    )
+    assert reg2.status_code == 201
+    hdr2 = {"Authorization": f"Bearer {reg2.json()['access_token']}"}
+
+    # 3. Protección contra subida de ejecutables y SSRF en repo_url
+    acts = client.get("/api/v1/portfolio/activities", headers=hdr1).json()
+    act_id = acts[0]["id"]
+
+    bad_ext = client.post(
+        f"/api/v1/portfolio/activities/{act_id}/submissions",
+        headers=hdr1,
+        data={"student_group_name": "Alumno Uno"},
+        files=[("files", ("payload.exe", b"MZ", "application/octet-stream"))],
+    )
+    assert bad_ext.status_code == 415
+
+    bad_repo = client.post(
+        f"/api/v1/portfolio/activities/{act_id}/submissions",
+        headers=hdr1,
+        data={"student_group_name": "Alumno Uno", "repo_url": "http://169.254.169.254/latest"},
+    )
+    assert bad_repo.status_code == 422
+
+    # 4. Protección BOLA / IDOR: alumno2 no puede acceder ni evaluar la entrega privada de alumno1
+    good_up = client.post(
+        f"/api/v1/portfolio/activities/{act_id}/submissions",
+        headers=hdr1,
+        data={"student_group_name": "Alumno Uno", "repo_url": "https://github.com/umanizales/demo-lab"},
+        files=[("files", ("notas.md", b"# Evidencia privada", "text/markdown"))],
+    )
+    assert good_up.status_code == 201
+    private_sub_id = good_up.json()["submission_id"]
+
+    idor_read = client.get(f"/api/v1/portfolio/submissions/{private_sub_id}", headers=hdr2)
+    assert idor_read.status_code == 403
+
+    idor_eval = client.post(
+        f"/api/v1/evaluations/submissions/{private_sub_id}/run",
+        headers=hdr2,
+        json={"provider_override": "deterministic"},
+    )
+    assert idor_eval.status_code == 403
+
+    # 5. Revocación de JWT al cerrar sesión (/logout)
+    logout_resp = client.post("/api/v1/auth/logout", headers=hdr1)
+    assert logout_resp.status_code == 200
+    reused = client.get("/api/v1/auth/me", headers=hdr1)
+    assert reused.status_code == 401
+
+    # 6. Rate limiter contra fuerza bruta en /login
+    for _ in range(8):
+        client.post(
+            "/api/v1/auth/login",
+            json={"email": "alumno1@umanizales.edu.co", "password": "WrongPassword123"},
+        )
+    blocked = client.post(
+        "/api/v1/auth/login",
+        json={"email": "alumno1@umanizales.edu.co", "password": "WrongPassword123"},
+    )
+    assert blocked.status_code == 429
+
+    # 7. Si PUBLIC_DEMO_MODE se activa explícitamente, permite lectura abierta
+    monkeypatch.setattr(get_settings(), "public_demo_mode", True)
+    open_resp = client.get("/api/v1/portfolio/activities")
+    assert open_resp.status_code == 200
+
 

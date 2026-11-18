@@ -3,7 +3,7 @@
 **Proyecto Final — Profundización I: Inteligencia Artificial**  
 Ingeniería de Sistemas y Telecomunicaciones — Universidad de Manizales  
 **Equipo desarrollador:** Juan José Muñoz Naranjo y Christopher Villa Noreña  
-**Estado actual:** **Implementado, verificado (`10/10` pruebas pytest, compilación TypeScript/Vite limpia) y desplegado en Render Free Tier + PostgreSQL Neon.**
+**Estado actual:** **Implementado, endurecido en seguridad (OWASP/JWT/RBAC/BOLA/Rate Limiting), verificado (`11/11` pruebas pytest, compilación TypeScript/Vite limpia) y desplegado en Render Free Tier + PostgreSQL Neon.**
 
 ---
 
@@ -30,8 +30,8 @@ Toda evaluación ejecutada en la plataforma se estructura bajo un contrato Pydan
 1. **Presentación del proyecto y equipo (`/`, `GET /api/v1/public/overview`):** abstract, arquitectura, enlace al repositorio y perfiles con fotografía real y roles equivalentes del equipo.
 2. **Portafolio académico por cohortes (`/portafolio`):** 6 actividades reales precargadas (**Cohorte 1:** Lab 1, Lab 2, Lab 3, Parcial 1; **Cohorte 2:** Lab 5/Coloquio y Lab 6), cálculo de hashes `SHA-256`, extracción textual de evidencias (`.pdf`, `.py`, `.ipynb`, `.md`, `.zip`) y carga de nuevas entregas (archivos/ZIP o URL de GitHub).
 3. **Gestión de rúbricas versionadas al 100 % (`/rubricas`):** editor e historial de versiones por actividad con validación estricta (la suma de ponderaciones debe ser exactamente `100 %` antes de permitir evaluar). Parten de una plantilla editable propuesta (`25/25/30/20 %`) marcada como tal (`is_template_proposal=True`).
-4. **Evaluación inteligente + Supervisión docente HITL (`/evaluacion/:id`, `/revision-docente`):** ejecución con IA activa o con **Auditor Determinista Offline**, trazabilidad completa (modelo, versión de rúbrica, hashes, salida de sandbox) y pantalla de revisión para que el docente ajuste criterios con justificación y apruebe la calificación definitiva.
-5. **Informe integrado de aprendizaje (`/informe-integral`, `GET /api/v1/reports/integrated`):** consolidado entre Cohortes 1 y 2, nivel de dominio por competencia, brechas y plan personalizado de fortalecimiento, con exportación imprimible.
+4. **Evaluación inteligente + Supervisión docente HITL (`/evaluacion/:id`, `/docente/revision`):** ejecución con IA activa o con **Auditor Determinista Offline**, trazabilidad completa, exportación real descargable en **`.pdf`**, **`.md`** y **`.json`**, y pantalla de revisión para que el docente ajuste criterios y apruebe la nota definitiva.
+5. **Informe integrado de aprendizaje (`/informe-integral`, `GET /api/v1/reports/integrated`):** consolidado entre Cohortes 1 y 2, nivel de dominio por competencia, brechas y plan personalizado, con descarga directa en **`.pdf`**, **`.md`** y **`.json`**.
 6. **Mapa mental interactivo de competencias (`/mapa-mental`, `GET /api/v1/mindmap`):** grafo jerárquico horizontal sin solapamiento (**33 nodos y 36 aristas**) implementado con `@xyflow/react`, filtros por cohorte/actividad/nivel de dominio y exportación en `.svg`, `.png` y `.json`.
 7. **Administración de modelos de IA (`/admin/modelos`):** router intercambiable (*modelo intercambiable, harness permanente*) con soporte para **Gemini Free Tier**, **Groq Free Tier**, conectores locales **Ollama** / **LM Studio** y **Auditor Determinista Offline**.
 
@@ -52,8 +52,9 @@ Toda evaluación ejecutada en la plataforma se estructura bajo un contrato Pydan
 
 ## 5. Seguridad, privacidad y transparencia técnica
 
-* **Protección de trabajos privados y credenciales:** la carpeta `source-material/`, archivos `.env`, entornos virtuales y bases `.db` locales están excluidos del repositorio público mediante `.gitignore`. No hay claves API hardcodeadas en el código.
-* **Autenticación JWT + RBAC (`PUBLIC_DEMO_MODE`):** el backend implementa contraseñas con `bcrypt`, tokens `JWT` y control de acceso por roles (`student`, `teacher`, `admin`). Por defecto en `render.yaml` se habilita `PUBLIC_DEMO_MODE=true` para permitir la exploración inmediata durante la socialización sin barrera de login; al configurar `PUBLIC_DEMO_MODE=false` en las variables de entorno, la plataforma exige autenticación estricta en todas las rutas protegidas.
+* **Protección de trabajos privados y cero secretos en código:** `source-material/`, `.env` y bases `.db` locales están excluidos mediante `.gitignore`. No hay claves API ni contraseñas administrativas fijas en el código fuente (el fallback de `JWT_SECRET_KEY` y las semillas sin variables de entorno generan claves criptográficas aleatorias).
+* **Autenticación JWT obligatoria + RBAC + Revocación (`PUBLIC_DEMO_MODE=false`):** el acceso a portafolio, rúbricas, evaluaciones, informes y mapa mental exige inicio de sesión válido (`JWT HS256` con `jti`, `iss`, expiración de 120 min, contraseñas `bcrypt`), control por roles (`student`, `teacher`, `admin`), revocación persistente de sesión (`/auth/logout` en tabla `revoked_tokens`), cambio de contraseña (`/auth/change-password`) y **Rate Limiting** contra ataques de fuerza bruta y DoS (`/login`, `/register`, cargas y evaluaciones IA).
+* **Aislamiento BOLA/IDOR, Uploads seguros y Defensa Anti-Prompt-Injection:** cada estudiante accede únicamente al portafolio base o a sus propias entregas (`403` ante accesos cruzados); las subidas verifican tamaño por streaming (`<= 20 MB`), saneamiento estricto de nombres y lista blanca de extensiones, protección anti-Zip-Bomb / path-traversal en `.zip`, validación HTTPS de `github.com` contra SSRF, cabeceras de seguridad (`CSP`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `HSTS`) y aislamiento de texto estudiantil con etiquetas `<untrusted_student_evidence>` + detección de patrones de *prompt injection*.
 * **Alcance de extracción multimodal:** archivos multimedia o comprimidos binarios (`.mp4`, `.png`, `.jpeg`, binarios en `.zip`) se inventarían con su `SHA-256` y metadatos (`partial_metadata_only`); el análisis LLM actual procesa resúmenes textuales y código extraído, sin transcripción automática de audio ni OCR de imágenes.
 
 ---
@@ -63,9 +64,9 @@ Toda evaluación ejecutada en la plataforma se estructura bajo un contrato Pydan
 Ejecutadas tras los últimos cambios:
 
 ```powershell
-# Backend (10 pruebas unitarias, sandbox, RBAC, scoring y E2E)
+# Backend (11 pruebas unitarias, sandbox, seguridad OWASP, RBAC, scoring y E2E)
 .\backend\.venv\Scripts\python.exe -m pytest tests -v
-# Resultado verificado: 10 passed, 1 warning
+# Resultado verificado: 11 passed, 1 warning
 
 # Frontend (compilación TypeScript + Vite)
 cd frontend

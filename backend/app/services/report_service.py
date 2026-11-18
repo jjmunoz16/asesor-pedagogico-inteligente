@@ -330,3 +330,38 @@ def build_integrated_learning_report(session: Session) -> dict[str, Any]:
         "identified_gaps": unique_gaps,
         "strengthening_plan": unique_plan,
     }
+
+
+def render_integrated_report_markdown(integrated: dict[str, Any]) -> str:
+    avg = integrated.get("global_average")
+    avg_txt = f"{avg:.2f} / 5.00" if avg is not None else "Sin calificar"
+    lines = [
+        "# Informe Integral del Aprendizaje — Profundización I (IA)",
+        "",
+        f"- **Promedio Global:** **{avg_txt}**",
+        f"- **Actividades Evaluadas:** {integrated['evaluated_activities']} / {integrated['total_activities']}",
+        "",
+        "## 1. Evolución entre Cohortes",
+    ]
+    for ce in integrated.get("cohort_evolution", []):
+        cavg = f"{ce['average_score']:.2f}/5.00" if ce["average_score"] is not None else "Sin evaluar"
+        lines.append(f"- **{ce['cohort_name']} ({ce['cohort_code']}):** {cavg} ({ce['activities_evaluated']} evaluadas)")
+
+    lines.extend(["", "## 2. Desempeño por Actividad"])
+    for act in integrated.get("activities", []):
+        sc = f"{act['score']:.2f}/5.00" if act["score"] is not None else "Sin evaluar"
+        lines.append(f"- **[{act['cohort_code']}] {act['title']}:** {sc} (`{act['status']}`)")
+
+    lines.extend(["", "## 3. Competencias y Niveles de Dominio"])
+    for comp in integrated.get("competencies", []):
+        lines.append(f"- **{comp['competency']}:** {comp['average_score']:.2f}/5.00 ({comp['mastery_level']})")
+
+    lines.extend(["", "## 4. Brechas Identificadas"])
+    for gap in integrated.get("identified_gaps", []) or ["Sin brechas críticas registradas."]:
+        lines.append(f"- {gap}")
+
+    lines.extend(["", "## 5. Plan Personalizado de Fortalecimiento"])
+    for item in integrated.get("strengthening_plan", []) or ["Sin acciones registradas."]:
+        lines.append(f"- {item}")
+
+    return "\n".join(lines)

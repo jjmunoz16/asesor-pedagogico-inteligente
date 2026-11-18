@@ -71,7 +71,7 @@ $env:DATABASE_URL="PEGA_AQUI_TU_CADENA_DE_NEON"
    - `AI_PROVIDER` = `gemini` *(o `deterministic` si no pondrás API key)*
    - `GEMINI_API_KEY` = tu clave gratuita de Google AI Studio *(opcional)*
    - `SANDBOX_MODE` = `static_only`
-   - `PUBLIC_DEMO_MODE` = `true`
+   - `PUBLIC_DEMO_MODE` = `false` *(exige inicio de sesión JWT + RBAC en producción)*
 5. Haz clic en **Deploy Web Service**.
 6. Cuando el estado pase a **Live**, Render te dará tu URL pública `https://asesor-pedagogico-inteligente.onrender.com`.
 

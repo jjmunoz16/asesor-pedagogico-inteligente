@@ -11,7 +11,7 @@ interface AuthState {
   switchDemoRole: (role: UserRole) => void;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, fullName: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => (sessionStorage.getItem(DEMO_ROLE_KEY) as UserRole) || 'teacher',
   );
   const [user, setUser] = useState<User | null>(null);
-  const [isOpenDemo, setIsOpenDemo] = useState<boolean>(true);
+  const [isOpenDemo, setIsOpenDemo] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
@@ -32,7 +32,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     apiRequest<{ public_demo_mode?: boolean }>('/health')
       .then((h) => {
-        if (!cancelled) setIsOpenDemo(h.public_demo_mode !== false);
+        const openMode = h.public_demo_mode === true;
+        if (!cancelled) setIsOpenDemo(openMode);
+        if (!token && !openMode) {
+          return null;
+        }
         return apiRequest<User>('/auth/me', {}, token);
       })
       .then((u) => {
@@ -81,7 +85,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(res.user);
   }
 
-  function logout() {
+  async function logout() {
+    if (token) {
+      await apiRequest('/auth/logout', { method: 'POST' }, token).catch(() => {});
+    }
     sessionStorage.removeItem(TOKEN_KEY);
     setToken(null);
     setUser(null);

@@ -1,9 +1,11 @@
 """Configuración central de la aplicación leída desde variables de entorno."""
 
+import secrets
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,9 +26,9 @@ class Settings(BaseSettings):
     app_version: str = "1.0.0"
     database_url: str = f"sqlite:///{(BASE_DIR / 'asesor_pedagogico.db').as_posix()}"
 
-    jwt_secret_key: str = "dev-secret-key-change-before-production"
+    jwt_secret_key: str = Field(default_factory=lambda: secrets.token_urlsafe(48))
     jwt_algorithm: str = "HS256"
-    jwt_expire_minutes: int = 480
+    jwt_expire_minutes: int = 120
 
     ai_provider: Literal["gemini", "groq", "ollama", "lmstudio", "deterministic"] = "gemini"
     gemini_api_key: str = ""
@@ -43,11 +45,12 @@ class Settings(BaseSettings):
 
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     max_upload_size_mb: int = 20
-    public_demo_mode: bool = True
+    public_demo_mode: bool = False
 
-    demo_student_password: str = "Estudiante2026!"
-    demo_teacher_password: str = "Docente2026!"
-    demo_admin_password: str = "Admin2026!"
+    # Opcionales desde entorno para inicializar usuarios semilla sin hardcodear secretos en Git
+    demo_student_password: str = ""
+    demo_teacher_password: str = ""
+    demo_admin_password: str = ""
 
     @property
     def cors_origins_list(self) -> list[str]:

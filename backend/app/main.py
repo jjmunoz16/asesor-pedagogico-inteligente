@@ -3,11 +3,12 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api.auth import router as auth_router
 from app.api.portfolio import router as portfolio_router
@@ -23,6 +24,30 @@ from app.db.seed import run_seed
 from app.db.session import engine, init_db
 
 
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Inyecta cabeceras de endurecimiento HTTP (anti-XSS, anti-Clickjacking, HSTS)."""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: blob:; "
+            "font-src 'self' data:; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none'; "
+            "object-src 'none'; "
+            "base-uri 'self'"
+        )
+        return response
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     init_db()
@@ -32,7 +57,7 @@ async def lifespan(_: FastAPI):
 
 
 def _resolve_static_dir() -> Path | None:
-    """Busca archivos compilados del frontend para despliegue Todo-en-Uno (ej. HF Spaces)."""
+    """Busca archivos compilados del frontend para despliegue Todo-en-Uno."""
     for candidate in (BASE_DIR / "static", BASE_DIR.parent / "frontend" / "dist"):
         if (candidate / "index.html").is_file():
             return candidate
@@ -45,15 +70,26 @@ def create_app() -> FastAPI:
         title=settings.app_name,
         version=settings.app_version,
         lifespan=lifespan,
+        docs_url="/docs" if settings.public_demo_mode else None,
+        redoc_url="/redoc" if settings.public_demo_mode else None,
+        openapi_url="/openapi.json" if settings.public_demo_mode else None,
     )
 
+    app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins_list,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type"],
     )
+
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(_request: Request, _exc: Exception):
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Error interno controlado del servidor."},
+        )
 
     api_prefix = "/api/v1"
     app.include_router(public_router, prefix=api_prefix)
@@ -73,9 +109,12 @@ def create_app() -> FastAPI:
 
         @app.get("/{full_path:path}", include_in_schema=False)
         def serve_spa(full_path: str):
-            if full_path.startswith("api/"):
-                raise HTTPException(status_code=404, detail="Endpoint no encontrado")
-            candidate = (static_dir / full_path).resolve()
+            if full_path.startswith("api/") or "\x00" in full_path:
+                raise HTTPException(status_code=404, detail="Recurso no encontrado")
+            try:
+                candidate = (static_dir / full_path).resolve()
+            except (OSError, ValueError) as exc:
+                raise HTTPException(status_code=404, detail="Recurso no encontrado") from exc
             if (
                 full_path
                 and candidate.is_file()

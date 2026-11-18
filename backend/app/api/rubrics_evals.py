@@ -3,15 +3,17 @@
 import json
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlmodel import Session, select
 
-from app.core.security import get_current_user, require_roles
-from app.db.models import Activity, Rubric, RubricCriterion, RubricVersion, User, UserRole
+from app.core.rate_limit import ai_action_rate_limiter, get_client_ip
+from app.core.security import assert_submission_access, get_current_user, require_roles
+from app.db.models import Activity, Evaluation, Rubric, RubricCriterion, RubricVersion, Submission, User, UserRole
 from app.db.session import get_session
 from app.schemas.evaluation import RunEvaluationRequest, TeacherReviewRequest
 from app.schemas.rubric import RubricUpsertRequest
 from app.services.evaluation_service import review_evaluation_hitl, run_submission_evaluation
+from app.services.pdf_service import render_individual_report_pdf
 from app.services.report_service import (
     build_individual_report,
     render_individual_report_markdown,
@@ -96,13 +98,25 @@ def upsert_rubric(
     }
 
 
+def _assert_evaluation_access(session: Session, evaluation_id: int, current_user: User) -> None:
+    ev = session.exec(select(Evaluation).where(Evaluation.id == evaluation_id)).first()
+    if not ev:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evaluación no encontrada.")
+    sub = session.exec(select(Submission).where(Submission.id == ev.submission_id)).first()
+    if sub:
+        assert_submission_access(sub, current_user)
+
+
 @evaluations_router.post("/submissions/{submission_id}/run", status_code=status.HTTP_201_CREATED)
 async def run_evaluation(
+    request: Request,
     submission_id: int,
     current_user: Annotated[User, Depends(get_current_user)],
     session: Annotated[Session, Depends(get_session)],
     payload: RunEvaluationRequest | None = None,
 ):
+    ip = get_client_ip(request)
+    ai_action_rate_limiter.check(f"eval:{ip}:{current_user.id}")
     req = payload or RunEvaluationRequest()
     evaluation = await run_submission_evaluation(
         session=session,
@@ -117,18 +131,20 @@ async def run_evaluation(
 @evaluations_router.get("/{evaluation_id}")
 def get_evaluation_report(
     evaluation_id: int,
-    _: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     session: Annotated[Session, Depends(get_session)],
 ):
+    _assert_evaluation_access(session, evaluation_id, current_user)
     return build_individual_report(session, evaluation_id)
 
 
 @evaluations_router.get("/{evaluation_id}/markdown")
 def export_evaluation_markdown(
     evaluation_id: int,
-    _: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     session: Annotated[Session, Depends(get_session)],
 ):
+    _assert_evaluation_access(session, evaluation_id, current_user)
     report = build_individual_report(session, evaluation_id)
     md = render_individual_report_markdown(report)
     return Response(
@@ -136,6 +152,24 @@ def export_evaluation_markdown(
         media_type="text/markdown; charset=utf-8",
         headers={
             "Content-Disposition": f'attachment; filename="informe_evaluacion_{evaluation_id}.md"'
+        },
+    )
+
+
+@evaluations_router.get("/{evaluation_id}/pdf")
+def export_evaluation_pdf(
+    evaluation_id: int,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+):
+    _assert_evaluation_access(session, evaluation_id, current_user)
+    report = build_individual_report(session, evaluation_id)
+    pdf_bytes = render_individual_report_pdf(report)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="informe_evaluacion_{evaluation_id}.pdf"'
         },
     )
 

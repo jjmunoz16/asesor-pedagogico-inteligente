@@ -1,17 +1,36 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Award, BarChart3, Download, Printer, TrendingUp } from 'lucide-react';
-import { apiRequest } from '../api/client';
+import { apiDownloadBlob, apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import type { IntegratedReport } from '../types';
 
 export function IntegratedReportPage() {
   const { token } = useAuth();
   const [data, setData] = useState<IntegratedReport | null>(null);
+  const [errMsg, setErrMsg] = useState<string | null>(null);
 
   useEffect(() => {
     apiRequest<IntegratedReport>('/reports/integrated', {}, token).then(setData);
   }, [token]);
+
+  async function downloadPdf() {
+    try {
+      setErrMsg(null);
+      await apiDownloadBlob('/reports/integrated/pdf', 'informe_integral_aprendizaje.pdf', token);
+    } catch (err) {
+      setErrMsg(err instanceof Error ? err.message : 'Error descargando PDF');
+    }
+  }
+
+  async function downloadMarkdown() {
+    try {
+      setErrMsg(null);
+      await apiDownloadBlob('/reports/integrated/markdown', 'informe_integral_aprendizaje.md', token);
+    } catch (err) {
+      setErrMsg(err instanceof Error ? err.message : 'Error descargando Markdown');
+    }
+  }
 
   function downloadJson() {
     if (!data) return;
@@ -37,21 +56,39 @@ export function IntegratedReportPage() {
             Consolidado global de competencias, evolución entre Cohortes 1 y 2 y plan de fortalecimiento.
           </p>
         </div>
-        <div className="no-print flex gap-2">
+        <div className="no-print flex flex-wrap gap-2">
           <button
-            onClick={() => window.print()}
+            onClick={downloadPdf}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-indigo-700"
+          >
+            <Download className="h-4 w-4" /> Descargar PDF
+          </button>
+          <button
+            onClick={downloadMarkdown}
             className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
           >
-            <Printer className="h-4 w-4" /> Descargar PDF
+            <Download className="h-4 w-4" /> .MD
           </button>
           <button
             onClick={downloadJson}
             className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white hover:bg-slate-800"
           >
-            <Download className="h-4 w-4" /> Exportar JSON
+            <Download className="h-4 w-4" /> .JSON
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            <Printer className="h-4 w-4" /> Imprimir
           </button>
         </div>
       </div>
+
+      {errMsg && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {errMsg}
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="print-container rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 p-5 text-white shadow-md">

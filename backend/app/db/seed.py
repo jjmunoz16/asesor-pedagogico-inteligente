@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+import secrets
 
 from sqlmodel import Session, select
 
@@ -235,7 +236,7 @@ def run_seed(session: Session) -> None:
     """Inicializa datos base sin duplicar registros ni modificar source-material/."""
     settings = get_settings()
 
-    # 1. Usuarios base
+    # 1. Usuarios base (nunca usa contraseñas débiles fijas en el código fuente)
     users_spec = [
         ("estudiante@umanizales.edu.co", "Juan José Muñoz & Christopher Villa", UserRole.STUDENT, settings.demo_student_password),
         ("docente@umanizales.edu.co", "Docente Profundización I", UserRole.TEACHER, settings.demo_teacher_password),
@@ -243,15 +244,20 @@ def run_seed(session: Session) -> None:
     ]
     student_user: User | None = None
     teacher_user: User | None = None
-    for email, name, role, pwd in users_spec:
+    for email, name, role, env_pwd in users_spec:
         existing = session.exec(select(User).where(User.email == email)).first()
         if not existing:
+            raw_pwd = env_pwd.strip() if env_pwd and env_pwd.strip() else f"{secrets.token_urlsafe(14)}Aa1"
             existing = User(
                 email=email,
                 full_name=name,
                 role=role,
-                password_hash=hash_password(pwd),
+                password_hash=hash_password(raw_pwd),
             )
+            session.add(existing)
+            session.flush()
+        elif env_pwd and env_pwd.strip() and not existing.password_hash:
+            existing.password_hash = hash_password(env_pwd.strip())
             session.add(existing)
             session.flush()
         if role == UserRole.STUDENT:
